@@ -1,0 +1,25 @@
+<html>
+<head>
+</head>
+<body>
+<form action="/loginAuth" method="POST">
+	Choose your portal: 
+	<select name = "userType">
+		<option value="customer">Customer</option>
+		<option value="booking_agent">Booking Agent</option>
+		<option value="airline_staff">Airline Staff</option>
+	</select></br>
+	Email or username: <input type="text" name = "ID" placeholder="email address or username" required/> </br>
+	Password: <input type="password" name = "password" placeholder="password" required/></br>
+	<input type="submit" value = Login />
+	{% if error %}
+		<p class="error"><strong>Error:</strong> {{error}}</p>
+	{% endif %}
+</form>
+
+<a href="/">Go back</a>
+
+</body>
+
+
+</html>

@@ -1,0 +1,55 @@
+<html>
+<head>
+</head>
+<body>
+
+{% if customer %}
+	<form action="/registerAuth" method="POST">
+		Email: <input type="email" name="email" placeholder="please enter your email" required></br>
+		Password: <input type="password" name="password" placeholder="please enter your password" required></br>
+		Name: <input type="text" name="name" placeholder="please enter your name" required></br>
+		Building number: <input type="text" name="building_number" placeholder="please enter your building number" required></br>
+		Street: <input type="text" name="street" placeholder="please enter the street address" required></br>
+		City: <input type="text" name="city" placeholder="please enter the city you live in" required></br>
+		State: <input type="text" name="state" placeholder="please enter the state you live in" required></br>
+		Phone number: <input type="number" name="phone_number" placeholder="please enter your phone number" required></br>
+		Passport number: <input type="text" name="passport_number" placeholder="please enter your passport number" required></br>
+		Passport expiration date: <input type="date" name="passport_expiration" placeholder="please enter your passport expiration date" required></br>
+		Passport country: <input type="text" name="passport_country" placeholder="please enter name of the country that issued your passport" required></br>
+		Date of birth: <input type="date" name="date_of_birth" placeholder="please enter your date of birth" required></br>
+		<input type="hidden" name="userType" value="customer"></br>
+		<button type="submit">Submit</button></br>
+	</form>
+{% endif %}
+{% if agent %}
+	<form action="/registerAuth" method="POST">
+		Email: <input type="email" name="email" placeholder="please enter your email" required></br>
+		Password: <input type="password" name="password" placeholder="please enter your password" required></br>
+		Booking agent ID: <input type="number" name="booking_agent_id" placeholder="please enter the booking agent id" required></br>
+		<input type="hidden" name="userType" value="booking_agent"></br>
+		<button type="submit">Submit</button></br>
+	</form>
+{% endif %}
+{% if staff %}
+	<form action="/registerAuth" method="POST">
+		Username: <input type="text" name="username" placeholder="please enter your username" required></br>
+		Password: <input type="password" name="password" placeholder="please enter your password" required></br>
+		Firstname: <input type="text" name="first_name" placeholder="please enter your first name" required></br>
+		Lastname: <input type="text" name="last_name" placeholder="please enter your last name" required></br>
+		Date of birth: <input type="date" name="date_of_birth" placeholder="please enter your date of birth" required></br>
+		Airline: <input type="text" name="airline_name" placeholder="please enter name of the airline company you work for" required></br>
+		<input type="hidden" name="userType" value="airline_staff"></br>
+		<button type="submit">Submit</button></br>
+	</form>
+{% endif %}
+
+{% if error %}
+		<p class="error"><strong>Error:</strong> {{error}}</p>
+{% endif %}
+
+<a href="/">Go back</a>
+
+</body>
+
+
+</html>
