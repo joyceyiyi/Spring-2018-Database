@@ -1,0 +1,55 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+    <p>hello guest</p>
+    <form action="/guest_home" method="POST">
+        Departure city: <input type="text" name="departure_city" placeholder="source city">
+        Departure airport: <input type="text" name="departure_airport" placeholder="source airport"></br>
+        Destination city: <input type="text" name="arrival_city" placeholder="destination city">
+        Destination airport: <input type="text" name="arrival_airport" placeholder="destination airport"></br>
+        Departure date: <input type="date" name="departure_date" placeholder="departure date"></br>
+        <input type="submit" value="search">
+    </form>
+
+    {% if result %}
+        <table>
+            <th>Airline Name</th>
+            <th>Airplane#</th>
+            <th>Flight#</th>
+            <th>Departure Airport</th>
+            <th>Departure Time</th>
+            <th>Arrival Airport</th>
+            <th>Arrival Time</th>
+            <th>Ticket Price</th>
+            <th>Status</th>
+
+        
+        {% for flight in result %}
+            <tr>
+                <td>{{flight.airline_name}}</td>
+                <td>{{flight.airplane_id}}</td>
+                <td>{{flight.flight_num}}</td>
+                <td>{{flight.departure_airport}}</td>
+                <td>{{flight.departure_time}}</td>
+                <td>{{flight.arrival_airport}}</td>
+                <td>{{flight.arrival_time}}</td>
+                <td>{{flight.price}}</td>
+                <td>{{flight.status}}</td>
+            </tr>
+        {% endfor %}
+        </table>
+    {% endif %}
+    
+    {% if error %}
+		<p class="error"><strong>Error:</strong> {{error}}</p>
+    {% endif %}
+    
+    <a href="/">Back to login</a>
+
+</body>
+
+</html>

@@ -2,6 +2,7 @@
 from flask import Flask, render_template, request, session, url_for, redirect
 import pymysql.cursors
 from passlib.hash import md5_crypt
+from util import *
 
 
 #Initialize the app from Flask
@@ -20,6 +21,11 @@ conn = pymysql.connect(host='localhost',
 @app.route('/')
 def index():
 	return render_template('index.html')
+
+#Define a route for guest
+@app.route('/guest')
+def guest():
+    return render_template('guest.html')
 
 #Define route for login
 @app.route('/login')
@@ -153,15 +159,17 @@ def registerAuth():
 
 @app.route('/home')
 def home():
-    ID = session['ID']
-    userType = session['userType']
-    # cursor = conn.cursor()
-    # query = 'SELECT ts, blog_post FROM blog WHERE username = %s ORDER BY ts DESC'
-    # cursor.execute(query, (username))
-    # data = cursor.fetchall()
-    # cursor.close()
-    # return render_template('home.html', username=username, posts=data)
-    return render_template('home.html', ID=ID, userType=userType)
+    ID = session['ID'] if 'ID' in session else None
+    userType = session['userType'] if 'userType' in session else None
+
+    if userType == 'customer':
+        return render_template('customer_home.html', ID=ID, userType=userType)
+    elif userType == 'booking_agent':
+        return render_template('agent_home.html', ID=ID, userType=userType)
+    elif userType == 'airline_staff':
+        return render_template('staff_home.html', ID=ID, userType=userType)
+    else:
+        return render_template('guest_home.html')
 
 		
 @app.route('/post', methods=['GET', 'POST'])
@@ -180,6 +188,23 @@ def logout():
     session.pop('ID')
     session.pop('userType')
     return redirect('/')
+
+
+@app.route('/guest_home', methods=['GET', 'POST'])
+def guest_home():
+    if request.method == 'POST':
+        if flightSearchValidation(request):
+            query, args = flightSearchQuery(request)
+            cursor = conn.cursor()
+            cursor.execute(query, args)
+            data = cursor.fetchall()
+            return render_template('guest_home.html', result=data)
+        else:
+            return render_template('guest_home.html', error="Please enter departure city/airport, arrival city/airport and travel date")
+    else:
+        return render_template('guest_home.html')
+
+
 		
 app.secret_key = 'some key that you will never guess'
 #Run the app on localhost port 5000
