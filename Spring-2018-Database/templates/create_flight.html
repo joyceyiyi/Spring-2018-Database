@@ -1,0 +1,29 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+    <p>{{airline_name}}</p>
+    <form action="" method="POST">
+        <input type="hidden" name="airline_name" value="{{airline_name}}">
+        Flight Number: <input type="number" name="flight_num" placeholder="flight number" required></br>
+        Departure Airport: <input type="text" name="departure_airport" placeholder="departure airport" required></br>
+        Departure Time: <input type="datetime-local" name="departure_time" placeholder="departure time" required></br>
+        Arrival Airport: <input type="text" name="arrival_airport" placeholder="arrival airport" required></br>
+        Arrival Time: <input type="datetime-local" name="arrival_time" placeholder="arrival time" required></br>
+        Price: <input type="number" name="price" placeholder="ticket price" required></br>
+        Status: <select name = "status">
+                    <option value="upcoming">upcoming</option>
+                    <option value="in-progress">in-progress</option>
+                    <option value="delayed">delayed</option>
+                </select></br>
+        Airplane ID: <input type="number" name="airplane_id" placeholder="airplane id" required></br>
+        <input type="submit" value="Add Flight"></br>
+    </form>
+    <a href="/staff_home">Back</a>
+
+</body>
+
+</html>

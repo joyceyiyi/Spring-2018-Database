@@ -22,15 +22,18 @@ conn = pymysql.connect(host='localhost',
 def index():
 	return render_template('index.html')
 
+
 #Define a route for guest
 @app.route('/guest')
 def guest():
     return render_template('guest.html')
 
+
 #Define route for login
 @app.route('/login')
 def login():
 	return render_template('login.html')
+
 
 #User selection for register
 @app.route('/userselect', methods=['GET', 'POST'])
@@ -53,10 +56,12 @@ def userSelect():
     else:
         return render_template('userSelect.html')
 
+
 #Define route for register
 @app.route('/register')
 def register():
 	return render_template('register.html')
+
 
 #Authenticates the login
 @app.route('/loginAuth', methods=['GET', 'POST'])
@@ -80,8 +85,10 @@ def loginAuth():
         if md5_crypt.verify(rawpwd, exist['password']):
             #creates a session for the the user
             #session is a built in
+            print(exist)
             session['ID'] = ID
             session['userType'] = userType
+            session['airline_name'] = exist['airline_name'] if 'airline_name' in exist else None
             return redirect(url_for('home'))
         else:
             error = 'Invalid password'
@@ -156,18 +163,18 @@ def registerAuth():
 
 
 
-
 @app.route('/home')
 def home():
     ID = session['ID'] if 'ID' in session else None
     userType = session['userType'] if 'userType' in session else None
+    airline_name = session['airline_name'] if 'airline_name' in session else None
 
     if userType == 'customer':
         return render_template('customer_home.html', ID=ID, userType=userType)
     elif userType == 'booking_agent':
         return render_template('agent_home.html', ID=ID, userType=userType)
     elif userType == 'airline_staff':
-        return render_template('staff_home.html', ID=ID, userType=userType)
+        return redirect(url_for('staff_home', ID=ID, userType=userType, airline_name=airline_name))
     else:
         return render_template('guest_home.html')
 
@@ -183,10 +190,13 @@ def post():
 	cursor.close()
 	return redirect(url_for('home'))
 
+
 @app.route('/logout')
 def logout():
     session.pop('ID')
-    session.pop('userType')
+    userType = session.pop('userType')
+    if userType == 'airline_staff':
+        session.pop('airline_name')
     return redirect('/')
 
 
@@ -204,6 +214,60 @@ def guest_home():
     else:
         return render_template('guest_home.html')
 
+
+@app.route('/staff_home', methods=['GET', 'POST'])
+def staff_home():
+    if request.method == 'POST':
+        airline_name = request.form['airline_name']
+        flight_num = request.form['flight_num']
+        cursor = conn.cursor()
+        # if status update
+        if 'update_status' in request.form:
+            new_status = request.form['update_status']
+            query = "UPDATE flight SET status = %s WHERE airline_name = %s and flight_num = %s"
+            cursor.execute(query, (new_status, airline_name, flight_num))
+            conn.commit()
+            msg = "Flight %s state updated as %s" % (flight_num, new_status)
+            return render_template('staff_home.html', ID=session['ID'], userType=session['userType'], result=showFlightsOfAirlineCo(cursor, airline_name, in_n_days = 30), airline_name=airline_name, message=msg)
+        # show passengers of a specific flight
+        query = '''SELECT DISTINCT name, email FROM purchases, ticket, customer 
+                   WHERE ticket.ticket_id = purchases.ticket_id and customer_email = email and airline_name = %s and flight_num = %s'''
+        cursor.execute(query, (airline_name, flight_num))
+        passengers = cursor.fetchall()
+        return render_template('staff_home.html', airline_name=airline_name, flight_num=flight_num, passengers=passengers)
+    else:
+        # read ID, userType, airline_name from args if login
+        # else read from session (back from check passenger)
+        ID = request.args.get('ID') if request.args.get('ID') else session['ID']
+        userType = request.args.get('userType') if request.args.get('userType') else session['userType']
+        airline_name = request.args.get('airline_name') if request.args.get('airline_name') else session['airline_name']
+        query = 'SELECT * FROM flight WHERE departure_time >= NOW() and departure_time < NOW() + INTERVAL 1 MONTH and airline_name = %s'
+        cursor = conn.cursor()
+        cursor.execute(query, airline_name)
+        data = cursor.fetchall()
+        return render_template('staff_home.html', ID=ID, userType=userType, result=data, airline_name=airline_name)
+
+
+@app.route('/create_flight', methods=['GET', 'POST'])
+def create_flight():
+    if request.method == 'POST':
+        airline_name = request.form['airline_name']
+        flight_num = request.form['flight_num']
+        departure_airport = request.form['departure_airport']
+        departure_time = request.form['departure_time']
+        arrival_airport = request.form['arrival_airport']
+        arrival_time = request.form['arrival_time']
+        price = request.form['price']
+        status = request.form['status']
+        airplane_id = request.form['airplane_id']
+        query = 'INSERT INTO flight VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)'
+        cursor = conn.cursor()
+        cursor.execute(query, (airline_name, flight_num, departure_airport, departure_time, arrival_airport, arrival_time, price, status, airplane_id))
+        conn.commit()
+        msg = "Flight %s Added" % flight_num
+        return render_template('staff_home.html', ID=session['ID'], userType=session['userType'], result=showFlightsOfAirlineCo(cursor, airline_name, in_n_days = 30), airline_name=airline_name, message=msg)
+    else:
+        return render_template('create_flight.html', airline_name=session['airline_name'])
 
 		
 app.secret_key = 'some key that you will never guess'
