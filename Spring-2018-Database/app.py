@@ -228,12 +228,15 @@ def staff_home():
             cursor.execute(query, (new_status, airline_name, flight_num))
             conn.commit()
             msg = "Flight %s state updated as %s" % (flight_num, new_status)
-            return render_template('staff_home.html', ID=session['ID'], userType=session['userType'], result=showFlightsOfAirlineCo(cursor, airline_name, in_n_days = 30), airline_name=airline_name, message=msg)
+            data = showFlightsOfAirlineCo(cursor, airline_name, in_n_days = 30)
+            cursor.close()
+            return render_template('staff_home.html', ID=session['ID'], userType=session['userType'], result=data, airline_name=airline_name, message=msg)
         # show passengers of a specific flight
         query = '''SELECT DISTINCT name, email FROM purchases, ticket, customer 
                    WHERE ticket.ticket_id = purchases.ticket_id and customer_email = email and airline_name = %s and flight_num = %s'''
         cursor.execute(query, (airline_name, flight_num))
         passengers = cursor.fetchall()
+        cursor.close()
         return render_template('staff_home.html', airline_name=airline_name, flight_num=flight_num, passengers=passengers)
     else:
         # read ID, userType, airline_name from args if login
@@ -265,9 +268,30 @@ def create_flight():
         cursor.execute(query, (airline_name, flight_num, departure_airport, departure_time, arrival_airport, arrival_time, price, status, airplane_id))
         conn.commit()
         msg = "Flight %s Added" % flight_num
-        return render_template('staff_home.html', ID=session['ID'], userType=session['userType'], result=showFlightsOfAirlineCo(cursor, airline_name, in_n_days = 30), airline_name=airline_name, message=msg)
+        data = showFlightsOfAirlineCo(cursor, airline_name, in_n_days = 30)
+        cursor.close()
+        return render_template('staff_home.html', ID=session['ID'], userType=session['userType'], result=data, airline_name=airline_name, message=msg)
     else:
         return render_template('create_flight.html', airline_name=session['airline_name'])
+
+
+@app.route('/add_airplane', methods=['GET', 'POST'])
+def add_airplane():
+    if request.method =='POST':
+        airline_name = request.form['airline_name']
+        airplane_id = request.form['airplane_id']
+        seats = request.form['seats']
+        query = 'INSERT INTO airplane VALUES(%s, %s, %s)'
+        cursor = conn.cursor()
+        cursor.execute(query, (airline_name, airplane_id, seats))
+        conn.commit()
+        msg = 'Airplane %s Added' % airplane_id
+        data = showFlightsOfAirlineCo(cursor, airline_name, in_n_days = 30)
+        cursor.close()
+        return render_template('staff_home.html', ID=session['ID'], userType=session['userType'], result=data, airline_name=airline_name, message=msg)
+    else:
+        return render_template('add_airplane.html', airline_name=session['airline_name'])
+
 
 		
 app.secret_key = 'some key that you will never guess'
