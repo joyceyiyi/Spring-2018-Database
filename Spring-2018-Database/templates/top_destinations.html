@@ -1,0 +1,37 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+    <t3>{{airline_name}}</t3>
+    <p>Top destinations within last three months</p>
+    <table>
+        <th>City</th>
+        <th>Number of Travels</th>
+
+        {% for topCity in result3month %}
+            <tr>
+                <td>{{topCity.airport_city}}</td>
+                <td>{{topCity.ticket_sold}}</td>
+            </tr>
+        {% endfor %}
+    </table>
+    <p>Top destinations for the last year</p>
+    <table>
+        <th>City</th>
+        <th>Number of Travels</th>
+
+        {% for topCity in resultLastYear %}
+            <tr>
+                <td>{{topCity.airport_city}}</td>
+                <td>{{topCity.ticket_sold}}</td>
+            </tr>
+        {% endfor %}
+    </table>
+    <a href="/staff_home">Back</a>
+
+</body>
+
+</html>

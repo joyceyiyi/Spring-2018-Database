@@ -31,4 +31,32 @@ def showFlightsOfAirlineCo(cursor, airline_name, in_n_days = None, start_time = 
         cursor.execute(query, (start_time, end_time, airline_name))
     data = cursor.fetchall()
     return data
+
+
+def showAirplanesOfAirlineCo(cursor, airline_name):
+    query = 'SELECT * FROM airplane WHERE airline_name = %s'
+    cursor.execute(query, airline_name)
+    data = cursor.fetchall()
+    return data
+
+
+def queryForTopDestinations(interval):
+    if interval == 'MONTH':
+        query = ('SELECT airport_city, COUNT(*) AS ticket_sold '
+                 'FROM (SELECT airport_city, arrival_airport '
+                       'FROM purchases NATURAL JOIN ticket NATURAL JOIN flight, airport '
+                       'WHERE airline_name = %s AND departure_time >= NOW() - INTERVAL 3 MONTH AND arrival_airport = airport_name) AS T '
+                 'GROUP BY airport_city '
+                 'ORDER BY ticket_sold DESC '
+                 'LIMIT 3')
+    else:
+        query = ('SELECT airport_city, COUNT(*) AS ticket_sold '
+                 'FROM (SELECT airport_city, arrival_airport '
+                       'FROM purchases NATURAL JOIN ticket NATURAL JOIN flight, airport '
+                       'WHERE airline_name = %s AND departure_time >= NOW() - INTERVAL 1 YEAR AND arrival_airport = airport_name) AS T '
+                 'GROUP BY airport_city '
+                 'ORDER BY ticket_sold DESC '
+                 'LIMIT 3')
+    return query
+
     

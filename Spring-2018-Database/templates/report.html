@@ -1,0 +1,67 @@
+{% block body %}
+
+{% if airline_name %}
+    <h3>{{airline_name}} Ticket Selling Report</h3>
+{% endif %}
+
+<form action="" method="POST">
+    From <input type="date" name="start_date" required> to <input type="date" name="end_date">
+    <input type="submit" value="Show">
+</form>
+<form action="" method="POST">
+    Last <input type="number" name="period" value=1 required>
+    <select name="interval">
+        <option value="MONTH">Month(s)</option>
+        <option value="YEAR">Year(s)</option>
+    </select>
+    <input type="submit" value="Show">
+</form>
+
+{% if result %}
+    {{message}} {{result}}
+{% endif %}
+
+<a href="/staff_home">Back</a></br>
+
+{% if sellStats %}
+{{message}} {{totSellNum}}
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<div id="chart_div"  style="width: 900px; height: 300px;"><div>
+<script type='text/javascript'>//<![CDATA[ 
+
+    google.load('visualization', '1', {packages: ['corechart', 'bar']});
+    google.setOnLoadCallback(drawBasic);
+        
+    function drawBasic() {
+
+        var sellStats = {{sellStats}}.map((element, index) => {
+            return ['Month '+(index+1), element]
+            });
+
+        sellStats.unshift(['Month', 'number of tickets sold']);
+        
+            var data = google.visualization.arrayToDataTable(sellStats);
+        
+            var options = {
+            title: 'Selling Stats',
+            chartArea: {width: '50%'},
+            hAxis: {
+                title: 'monthly sell',
+                minValue: 0
+            },
+            vAxis: {
+                title: 'Month'
+            }
+            };
+        
+            var chart = new google.visualization.BarChart(document.getElementById('chart_div'));
+        
+            chart.draw(data, options);
+        }
+    //]]>  
+        
+    </script>
+    
+{% endif %}
+  
+{% endblock %}

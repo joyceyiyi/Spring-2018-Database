@@ -1,0 +1,29 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+    <t3>{{airline_name}}</t3>
+    <p>{{customer_email}} Travel List</p>
+    <table>
+        <th>Ticket ID</th>
+        <th>Booking Agent ID</th>
+        <th>Purchase Date</th>
+        <th>Flight Number</th>
+
+        {% for trip in result %}
+            <tr>
+                <td>{{trip.ticket_id}}</td>
+                <td>{{trip.booking_agent_id}}</td>
+                <td>{{trip.purchase_date}}</td>
+                <td>{{trip.flight_num}}</td>
+            </tr>
+        {% endfor %}
+    </table>
+    <a href="/staff_home">Back</a>
+
+</body>
+
+</html>

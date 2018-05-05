@@ -5,13 +5,35 @@
 </head>
 
 <body>
-    <p>{{airline_name}}</p>
+    <h3>{{airline_name}} {{userType}} {{ID}}</h3>
+
+    {% if message %}
+        <h4>{{message}}</h4>
+    {% endif %}
+
+    {% if result %}
+        <table>
+            <th>Airline Name</th>
+            <th>Airplane ID</th>
+            <th>Capacity</th>
+    
+            {% for airplane in result %}
+                <tr>
+                    <td>{{airplane.airline_name}}</td>
+                    <td>{{airplane.airplane_id}}</td>
+                    <td>{{airplane.seats}}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+
     <form action="" method="POST">
         <input type="hidden" name="airline_name" value="{{airline_name}}">
         Airplane ID: <input type="number" name="airplane_id" placeholder="airplane id" required></br>
         Seats: <input type="number" name="seats" placeholder="capacity" required></br>
         <input type="submit" value="Add Airplane"></br>
     </form>
+
     <a href="/staff_home">Back</a>
 
 </body>

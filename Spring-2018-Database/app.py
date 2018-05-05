@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, session, url_for, redirect
 import pymysql.cursors
 from passlib.hash import md5_crypt
 from util import *
+from functools import wraps
 
 
 #Initialize the app from Flask
@@ -15,6 +16,25 @@ conn = pymysql.connect(host='localhost',
                        db='reservation',
                        charset='utf8mb4',
                        cursorclass=pymysql.cursors.DictCursor)
+
+
+# Define login check (decorator)
+def login_required(func):
+    @wraps(func)
+    def decorated_function(*args, **kwargs):
+        if not session:
+            return redirect(url_for('login'))
+        return func(*args, **kwargs)
+    return decorated_function
+
+# staff check
+def is_staff(func):
+    @wraps(func)
+    def decorated_function(*args, **kwargs):
+        if session['userType'] != 'airline_staff':
+            return redirect(url_for('login'))
+        return func(*args, **kwargs)
+    return decorated_function
 
 
 #Define a route to index function
@@ -32,11 +52,14 @@ def guest():
 #Define route for login
 @app.route('/login')
 def login():
-	return render_template('login.html')
+    # clear session each time request a login
+    session.clear()
+    return render_template('login.html')
 
 
 #User selection for register
 @app.route('/userselect', methods=['GET', 'POST'])
+@login_required
 def userSelect():
     if request.method == 'POST':
         userType = request.form.get('userType')
@@ -85,7 +108,6 @@ def loginAuth():
         if md5_crypt.verify(rawpwd, exist['password']):
             #creates a session for the the user
             #session is a built in
-            print(exist)
             session['ID'] = ID
             session['userType'] = userType
             session['airline_name'] = exist['airline_name'] if 'airline_name' in exist else None
@@ -164,6 +186,7 @@ def registerAuth():
 
 
 @app.route('/home')
+@login_required
 def home():
     ID = session['ID'] if 'ID' in session else None
     userType = session['userType'] if 'userType' in session else None
@@ -176,27 +199,17 @@ def home():
     elif userType == 'airline_staff':
         return redirect(url_for('staff_home', ID=ID, userType=userType, airline_name=airline_name))
     else:
-        return render_template('guest_home.html')
+        return redirect(url_for('guest_home'))
 
 		
-@app.route('/post', methods=['GET', 'POST'])
-def post():
-	username = session['username']
-	cursor = conn.cursor()
-	blog = request.form['blog']
-	query = 'INSERT INTO blog (blog_post, username) VALUES(%s, %s)'
-	cursor.execute(query, (blog, username))
-	conn.commit()
-	cursor.close()
-	return redirect(url_for('home'))
-
-
 @app.route('/logout')
+@login_required
 def logout():
-    session.pop('ID')
-    userType = session.pop('userType')
-    if userType == 'airline_staff':
-        session.pop('airline_name')
+    # session.pop('ID')
+    # userType = session.pop('userType')
+    # if userType == 'airline_staff':
+    #     session.pop('airline_name')
+    session.clear()
     return redirect('/')
 
 
@@ -216,6 +229,8 @@ def guest_home():
 
 
 @app.route('/staff_home', methods=['GET', 'POST'])
+@login_required
+@is_staff
 def staff_home():
     if request.method == 'POST':
         airline_name = request.form['airline_name']
@@ -252,6 +267,8 @@ def staff_home():
 
 
 @app.route('/create_flight', methods=['GET', 'POST'])
+@login_required
+@is_staff
 def create_flight():
     if request.method == 'POST':
         airline_name = request.form['airline_name']
@@ -276,6 +293,8 @@ def create_flight():
 
 
 @app.route('/add_airplane', methods=['GET', 'POST'])
+@login_required
+@is_staff
 def add_airplane():
     if request.method =='POST':
         airline_name = request.form['airline_name']
@@ -286,12 +305,161 @@ def add_airplane():
         cursor.execute(query, (airline_name, airplane_id, seats))
         conn.commit()
         msg = 'Airplane %s Added' % airplane_id
+        data = showAirplanesOfAirlineCo(cursor, airline_name)
+        cursor.close()
+        return render_template('add_airplane.html', ID=session['ID'], userType=session['userType'], result=data, airline_name=airline_name, message=msg)
+    else:
+        airline_name = session['airline_name']
+        cursor = conn.cursor()
+        data = showAirplanesOfAirlineCo(cursor, airline_name)
+        cursor.close()
+        return render_template('add_airplane.html', ID=session['ID'], userType=session['userType'], result=data, airline_name=airline_name)
+
+
+@app.route('/add_airport', methods=['GET', 'POST'])
+@login_required
+@is_staff
+def add_airport():
+    if request.method =='POST':
+        airline_name = request.form['airline_name']
+        airport_name = request.form['airport_name']
+        airport_city = request.form['airport_city']
+        query = 'INSERT INTO airport VALUES(%s, %s)'
+        cursor = conn.cursor()
+        cursor.execute(query, (airport_name, airport_city))
+        conn.commit()
+        msg = 'Airport %s in %s Added' % (airport_name, airport_city)
         data = showFlightsOfAirlineCo(cursor, airline_name, in_n_days = 30)
         cursor.close()
         return render_template('staff_home.html', ID=session['ID'], userType=session['userType'], result=data, airline_name=airline_name, message=msg)
     else:
-        return render_template('add_airplane.html', airline_name=session['airline_name'])
+        return render_template('add_airport.html', airline_name=session['airline_name'])
 
+
+@app.route('/top_destinations')
+@login_required
+@is_staff
+def top_destinations():
+    # show last 3 month and last year top destinations repectively
+    query3month = queryForTopDestinations('MONTH')
+    queryLastYear = queryForTopDestinations('YEAR')
+    cursor = conn.cursor()
+    cursor.execute(query3month, session['airline_name'])
+    data3month = cursor.fetchall()
+    cursor.execute(queryLastYear, session['airline_name'])
+    dataLastYear = cursor.fetchall()
+    cursor.close()
+    return render_template('top_destinations.html', airline_name=session['airline_name'], result3month=data3month, resultLastYear=dataLastYear)
+
+
+@app.route('/report', methods=['GET', 'POST'])
+@login_required
+@is_staff
+def report():
+    if request.method == 'POST':
+        cursor = conn.cursor()
+        # if search by start and end date
+        # if no end_date then set end_date to NOW
+        if 'start_date' in request.form:
+            start_date = request.form['start_date']
+            end_date = request.form['end_date'] if 'end_date' in request.form else 'NOW()'
+            queryStartEnd = 'SELECT * FROM ticket NATURAL JOIN purchases WHERE airline_name = %s AND purchase_date >= %s AND purchase_date <= %s'
+            cursor.execute(queryStartEnd, (session['airline_name'], start_date, end_date))
+            ticketNum = len(cursor.fetchall())
+            cursor.close()
+            msg = 'From %s to %s number of tickets sold: ' % (start_date, end_date)
+            return render_template('report.html', airline_name=session['airline_name'], result=ticketNum, message=msg)
+        # if search last month
+        elif request.form['interval'] == 'MONTH':
+            queryLastMonth = 'SELECT * FROM ticket NATURAL JOIN purchases WHERE airline_name = %s AND purchase_date <= NOW() and purchase_date > NOW() - INTERVAL %s MONTH'
+            cursor.execute(queryLastMonth, (session['airline_name'], request.form['period']))
+            ticketNum = len(cursor.fetchall())
+            cursor.close()
+            msg = 'Number of tickets sold for last %s month: ' % request.form['period']
+            return render_template('report.html', airline_name=session['airline_name'], result=ticketNum, message=msg)
+        # if search last year
+        elif request.form['interval'] == 'YEAR':
+            count = []
+            numOfYears = int(request.form['period'])
+            for i in range(12*numOfYears, 0, -1):
+                query = 'SELECT * FROM ticket NATURAL JOIN purchases WHERE airline_name = %s AND purchase_date < NOW() - INTERVAL %s MONTH and purchase_date >= NOW() - INTERVAL %s MONTH'
+                cursor.execute(query, (session['airline_name'], i-1, i))
+                count.append(len(cursor.fetchall()))
+            cursor.close()
+            totSellNum = sum(count)
+            msg = 'Number of tickets sold for last %s year: ' % numOfYears
+            return render_template('report.html', airline_name=session['airline_name'], sellStats=count, totSellNum=totSellNum, message=msg)
+
+    return render_template('report.html', airline_name=session['airline_name'])
+
+
+@app.route('/show_revenue')
+@login_required
+@is_staff
+def revenue():
+    # total direct revenue of an airline company
+    queryDirect = ('SELECT SUM(price) AS revenue_direct '
+                   'FROM (SELECT * '
+                         'FROM ticket NATURAL JOIN flight NATURAL JOIN purchases '
+                         'WHERE airline_name = %s AND booking_agent_id IS NULL) AS T')
+
+    # total indirect revenue of an airline company (10% commision)
+    queryIndirect = ('SELECT 0.9 * SUM(price) AS revenue_indirect '
+                     'FROM (SELECT * '
+                           'FROM ticket NATURAL JOIN flight NATURAL JOIN purchases '
+                           'WHERE airline_name = %s AND booking_agent_id IS NOT NULL) AS T')
+
+    cursor = conn.cursor()
+    cursor.execute(queryDirect, session['airline_name'])
+    dataDirect = cursor.fetchone()
+    cursor.execute(queryIndirect, session['airline_name'])
+    dataIndirect = cursor.fetchone()
+    cursor.close()
+    data = []
+    # using float() to convert Decimal
+    # if no direct or indirect revenue set to 0
+    data.append(float(dataDirect['revenue_direct']) if dataDirect['revenue_direct'] else 0)
+    data.append(float(dataIndirect['revenue_indirect']) if dataIndirect['revenue_indirect'] else 0)
+
+    return render_template('revenue.html', airline_name=session['airline_name'], result=data)
+
+
+@app.route('/view_customers', methods=['GET', 'POST'])
+@login_required
+@is_staff
+def view_customers():
+    if request.method == 'POST':
+        customer_email = request.form['customer_email']
+        return redirect(url_for('show_trips', airline_name=session['airline_name'], customer_email=customer_email))
+    # all customers(cust_email, name and number of trips) of an airline company
+    query = ('SELECT customer_email, name, COUNT(*) AS travels '
+             'FROM (SELECT ticket_id, customer_email, name, airline_name, flight_num '
+                   'FROM purchases NATURAL JOIN ticket, customer '
+                   'WHERE customer_email = email AND airline_name = %s) AS records '
+             'GROUP BY customer_email '
+             'ORDER BY travels DESC')
+    cursor = conn.cursor()
+    cursor.execute(query, session['airline_name'])
+    data = cursor.fetchall()
+
+    return render_template('view_customers.html', airline_name=session['airline_name'], result=data)
+
+
+@app.route('/show_trips')
+@login_required
+@is_staff
+def show_trips():
+    customer_email = request.args.get('customer_email')
+    airline_name = session['airline_name']
+    # query all trips of a customer of an airline company
+    query = ('SELECT ticket_id, booking_agent_id, purchase_date, flight_num '
+             'FROM purchases NATURAL JOIN ticket, customer '
+             'WHERE customer_email = email AND airline_name = %s AND customer_email = %s')
+    cursor = conn.cursor()
+    cursor.execute(query, (airline_name, customer_email))
+    data = cursor.fetchall()
+
+    return render_template('show_trips.html', airline_name=airline_name, result=data, customer_email=customer_email)
 
 		
 app.secret_key = 'some key that you will never guess'
@@ -299,4 +467,4 @@ app.secret_key = 'some key that you will never guess'
 #debug = True -> you don't have to restart flask
 #for changes to go through, TURN OFF FOR PRODUCTION
 if __name__ == "__main__":
-	app.run('127.0.0.1', 5000, debug = True)
+    app.run('127.0.0.1', 5000, debug = True)
