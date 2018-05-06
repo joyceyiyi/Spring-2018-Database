@@ -1,11 +1,162 @@
 <html>
-
-<head>
-
-</head>
-
+<title>customer_home</title>
+<head></head>
 <body>
-<p>Hello {{userType}} {{ID}}</p>
+<h1>Hello {{ID}}</h1>
+
+{% if purchase %}
+<p1>{{purchase}}</p1>
+{% endif %}
+
+<div class="flights">
+    <p2>Search your flights between specified dates:</p2>
+    <form action="customer_home_flights" method="POST">
+        Start date:<input type="date" name="start_date">
+        End date:<input type="date" name="end_date"></br>
+        <input type="submit" value="search">
+    </form>
+    {% if flight %}
+    <table>
+        <th>Airline Name</th>
+        <th>Airplane#</th>
+        <th>Flight#</th>
+        <th>Departure Airport</th>
+        <th>Departure Time</th>
+        <th>Arrival Airport</th>
+        <th>Arrival Time</th>
+        <th>Ticket Price</th>
+        <th>Status</th>
+        {% for f in flight %}
+        <tr>
+            <td>{{f.airline_name}}</td>
+            <td>{{f.airplane_id}}</td>
+            <td>{{f.flight_num}}</td>
+            <td>{{f.departure_airport}}</td>
+            <td>{{f.departure_time}}</td>
+            <td>{{f.arrival_airport}}</td>
+            <td>{{f.arrival_time}}</td>
+            <td>{{f.price}}</td>
+            <td>{{f.status}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</div>
+
+<ul class="entries">
+    {% if entries %}
+    <p3>Your upcoming flights:</p3>
+    <table>
+        <th>Airline Name</th>
+        <th>Airplane#</th>
+        <th>Flight#</th>
+        <th>Departure Airport</th>
+        <th>Departure Time</th>
+        <th>Arrival Airport</th>
+        <th>Arrival Time</th>
+        <th>Ticket Price</th>
+        <th>Status</th>
+        {% for flight in entries %}
+        <tr>
+            <td>{{flight.airline_name}}</td>
+            <td>{{flight.airplane_id}}</td>
+            <td>{{flight.flight_num}}</td>
+            <td>{{flight.departure_airport}}</td>
+            <td>{{flight.departure_time}}</td>
+            <td>{{flight.arrival_airport}}</td>
+            <td>{{flight.arrival_time}}</td>
+            <td>{{flight.price}}</td>
+            <td>{{flight.status}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</ul>
+
+<div class="search">
+<form action="/customer_home_search" method="POST">
+    Departure city: <input type="text" name="departure_city" placeholder="source city">
+    Departure airport: <input type="text" name="departure_airport" placeholder="source airport"></br>
+    Destination city: <input type="text" name="arrival_city" placeholder="destination city">
+    Destination airport: <input type="text" name="arrival_airport" placeholder="destination airport"></br>
+    Departure date: <input type="date" name="departure_date" placeholder="departure date"></br>
+    <input type="submit" value="search">
+</form>
+{% if result %}
+<table>
+    <th>Airline Name</th>
+    <th>Airplane#</th>
+    <th>Flight#</th>
+    <th>Departure Airport</th>
+    <th>Departure Time</th>
+    <th>Arrival Airport</th>
+    <th>Arrival Time</th>
+    <th>Ticket Price</th>
+    <th>Status</th>
+    {% for flight in result %}
+    <tr>
+        <td>{{flight.airline_name}} </td>
+        <td>{{flight.airplane_id}}</td>
+        <td>{{flight.flight_num}}</td>
+        <td>{{flight.departure_airport}}</td>
+        <td>{{flight.departure_time}}</td>
+        <td>{{flight.arrival_airport}}</td>
+        <td>{{flight.arrival_time}}</td>
+        <td>{{flight.price}}</td>
+        <td>{{flight.status}}</td>
+        <form action="/customer_home_purchase" method="POST">
+            <input type="hidden" name = "airline_name" value = '{{flight.airline_name}}'>
+            <input type="hidden" name="flight_num" value={{flight.flight_num}}>
+            <td><input type="submit" value="purchase"></td>
+        </form>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+{% if error %}
+<p4 class="error"><strong>Error:</strong> {{error}}</p4>
+{% endif %}
+</div>
+
+<div class="spending">
+{% if spending %}
+<p5>Your spending in the past one year: {{spending.spending}}</p5>
+{% endif %}
+</div>
+
+<div class="option_spending">
+    <p6>See your spending between specified dates</p6>
+    <form action="customer_home_spending" method="POST">
+        Start date:<input type="date" name="start_date">
+        End date:<input type="date" name="end_date"></br>
+        <input type="submit" value="search">
+    </form>
+    {% if spend %}
+        <p7>Your spending between {{date1}} and {{date2}} is {{spend.spending}}</p7>
+    {% endif %}
+</div>
+
+<div class="barchart">
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<div id="chart_div"></div>
+<script type="text/javascript">
+    google.charts.load('current', {packages: ['corechart']});
+    google.charts.setOnLoadCallback(drawChart);
+    function drawChart(){
+        //create the data table
+        var datas = new google.visualization.DataTable();
+        datas.addColumn('number','Month');
+        datas.addColumn('number','Spending');
+        rows = {{data}}
+        datas.addRows(rows)
+        var options = {'title':'Your monthly spending','width':400,'height':500};
+        //draw the chart
+        var chart = new google.visualization.BarChart(document.getElementById('chart_div'));
+        chart.draw(datas,options)
+    }
+</script>
+</div>
+
 <a href="/logout">Logout</a>
 
 </body>
