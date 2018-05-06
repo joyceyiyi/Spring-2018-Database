@@ -111,6 +111,7 @@ def loginAuth():
             session['ID'] = ID
             session['userType'] = userType
             session['airline_name'] = exist['airline_name'] if 'airline_name' in exist else None
+	    session['booking_agent_id'] = exist['booking_agent_id'] if 'booking_agent_id' in exist else None
             return redirect(url_for('home'))
         else:
             error = 'Invalid password'
@@ -191,11 +192,11 @@ def home():
     ID = session['ID'] if 'ID' in session else None
     userType = session['userType'] if 'userType' in session else None
     airline_name = session['airline_name'] if 'airline_name' in session else None
-
+    booking_agent_id = session['booking_agent_id'] if 'booking_agent_id' in session else None
     if userType == 'customer':
-        return render_template('customer_home.html', ID=ID, userType=userType)
+        return redirect(url_for('customer_home', ID=ID, userType=userType))
     elif userType == 'booking_agent':
-        return render_template('agent_home.html', ID=ID, userType=userType)
+        return redirect(url_for('agent_home', ID=ID, userType=userType,booking_agent_id=booking_agent_id))
     elif userType == 'airline_staff':
         return redirect(url_for('staff_home', ID=ID, userType=userType, airline_name=airline_name))
     else:
@@ -226,6 +227,168 @@ def guest_home():
             return render_template('guest_home.html', error="Please enter departure city/airport, arrival city/airport and travel date")
     else:
         return render_template('guest_home.html')
+
+@app.route('/customer_home',methods = ['GET'])
+def customer_home():
+    ID = request.args.get('ID')
+    cursor = conn.cursor()
+    query1,args1=upcomingFlightsQuerry(ID)
+    cursor.execute(query1,args1)
+    entries = cursor.fetchall()
+    #track the spending by default date
+    query2,args2=defaultSpendingQuerry(ID)
+    cursor.execute(query2,args2)
+    spending = cursor.fetchone() 
+    #get the data the the bar chart
+    data=[]
+    for i in range(6):
+        date1 = datetime.now() - relativedelta(months=i+1)
+        date2 = datetime.now() - relativedelta(months=i)
+        cursor.execute(query2,(ID,date1.strftime('%Y-%m-%d'),date2.strftime('%Y-%m-%d')))
+        spending_mon = cursor.fetchone()
+        s = spending_mon['spending']
+        if s == None:
+            s = 0
+        data.append([i+1,float(s)])
+    return render_template('customer_home.html',entries = entries,data=data,ID=ID,spending=spending)
+
+
+@app.route('/customer_home_flights',methods=['GET','POST'])
+def customer_home_flights():
+    ID = session['ID']
+    cursor = conn.cursor()
+    query1,args1=upcomingFlightsQuerry(ID)
+    cursor.execute(query1,args1)
+    entries = cursor.fetchall()
+    #track the spending by default date
+    query2,args2=defaultSpendingQuerry(ID)
+    cursor.execute(query2,args2)
+    spending = cursor.fetchone() 
+    data=[]
+    for i in range(6):
+        date1 = datetime.now() - relativedelta(months=i+1)
+        date2 = datetime.now() - relativedelta(months=i)
+        cursor.execute(query2,(ID,date1.strftime('%Y-%m-%d'),date2.strftime('%Y-%m-%d')))
+        spending_mon = cursor.fetchone()
+        s = spending_mon['spending']
+        if s == None:
+            s = 0
+        data.append([i+1,float(s)])
+    if request.method == 'POST':
+        date1 = request.form['start_date']
+        date2 = request.form['end_date']
+        query = flightsQuery()
+        cursor.execute(query,(ID,date1,date2))
+        flight = cursor.fetchall()
+        return render_template('customer_home.html',flight=flight,entries = entries,data=data,ID=ID,spending=spending)
+    else:
+        return render_template('customer_home.html',entries = entries,data=data,ID=ID,spending=spending)
+
+@app.route('/customer_home_spending',methods=['GET','POST'])
+def customer_home_spending():
+    ID = session['ID']
+    cursor = conn.cursor()
+    query1,args1=upcomingFlightsQuerry(ID)
+    cursor.execute(query1,args1)
+    entries = cursor.fetchall()
+    #track the spending by default date
+    query2,args2=defaultSpendingQuerry(ID)
+    cursor.execute(query2,args2)
+    spending = cursor.fetchone() 
+    data=[]
+    for i in range(6):
+        date1 = datetime.now() - relativedelta(months=i+1)
+        date2 = datetime.now() - relativedelta(months=i)
+        cursor.execute(query2,(ID,date1.strftime('%Y-%m-%d'),date2.strftime('%Y-%m-%d')))
+        spending_mon = cursor.fetchone()
+        s = spending_mon['spending']
+        if s == None:
+            s = 0
+        data.append([i+1,float(s)])
+    if request.method == 'POST':
+        date1 = request.form['start_date']
+        date2 = request.form['end_date']
+        query = spendingQuerry()
+        cursor.execute(query,(ID,date1,date2))
+        spend = cursor.fetchone()
+        return render_template('customer_home.html',spend=spend,ID=ID,date1=date1,date2=date2,spendinng=spending,entries=entries,data=data)
+    else:
+        return render_template('customer_home.html',ID=ID,spending=spending,entries=entries,data=data)
+
+    
+    
+@app.route('/customer_home_search',methods=['GET','POST'])
+def customer_home_search():
+    ID = session['ID']
+    cursor = conn.cursor()
+    query1,args1=upcomingFlightsQuerry(ID)
+    cursor.execute(query1,args1)
+    entries = cursor.fetchall()
+    #track the spending by default date
+    query2,args2=defaultSpendingQuerry(ID)
+    cursor.execute(query2,args2)
+    spending = cursor.fetchone()
+    data=[]
+    for i in range(6):
+        date1 = datetime.now() - relativedelta(months=i+1)
+        date2 = datetime.now() - relativedelta(months=i)
+        cursor.execute(query2,(ID,date1.strftime('%Y-%m-%d'),date2.strftime('%Y-%m-%d')))
+        spending_mon = cursor.fetchone()
+        s = spending_mon['spending']
+        if s == None:
+            s = 0
+        data.append([i+1,float(s)])
+    if request.method == 'POST':
+        if flightSearchValidation(request):
+            query, args = flightSearchQuery(request)
+            cursor.execute(query, args)
+            search = cursor.fetchall()
+            return render_template('customer_home.html', result=search,ID=ID,entries=entries,data=data,spending=spending)
+        else:
+            return render_template('customer_home.html', entries=entries,data=data,spending=spending,ID=ID,error="Please enter departure city/airport, arrival city/airport and travel date")
+    else:
+        return render_template('customer_home.html',ID=ID,entries=entries,data=data,spending=spending)
+
+
+
+@app.route('/customer_home_purchase',methods=['GET','POST'])
+def customer_home_purchase():
+    ID = session['ID']
+    cursor = conn.cursor()
+    query1,args1=upcomingFlightsQuerry(ID)
+    cursor.execute(query1,args1)
+    data = cursor.fetchall()
+    #track the spending by default date
+    query2,args2=defaultSpendingQuerry(ID)
+    cursor.execute(query2,args2)
+    spending = cursor.fetchone()
+    data=[]
+    for i in range(6):
+        date1 = datetime.now() - relativedelta(months=i+1)
+        date2 = datetime.now() - relativedelta(months=i)
+        cursor.execute(query2,(ID,date1.strftime('%Y-%m-%d'),date2.strftime('%Y-%m-%d')))
+        spending_mon = cursor.fetchone()
+        s = spending_mon['spending']
+        if s == None:
+            s = 0
+        data.append([i+1,float(s)])
+    if request.method == 'POST':
+        flight_num = request.form['flight_num']
+        airline_name = request.form['airline_name']
+        cursor = conn.cursor()
+        query3 = 'SELECT COUNT(ticket_id) AS num FROM ticket'
+        cursor.execute(query3)
+        num = cursor.fetchone()
+        ticket_id = num['num']+1
+        today = datetime.today().strftime('%Y-%m-%d')
+        query1 = 'INSERT INTO ticket VALUES(%s,%s,%s);'
+        query2 = 'INSERT INTO purchases VALUES(%s,%s,NULL,%s)'
+        cursor.execute(query1,(ticket_id,airline_name,flight_num))
+        conn.commit()
+        cursor.execute(query2,(ticket_id,ID,today))
+        conn.commit()
+    return render_template('customer_home.html',purchase='You have sucessfully purchased the ticket',ID=ID,entries=entries,data=data,spending=spending)
+
 
 
 @app.route('/staff_home', methods=['GET', 'POST'])
